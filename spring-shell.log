@@ -1,0 +1,119 @@
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 12:16:35
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 13:36:11
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 13:39:03
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 13:40:10
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 16:31:10
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 16:35:14
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 16:35:44
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 16:36:17
+component list
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 16:43:24
+component use a
+// Spring Shell 1.2.0.RELEASE log opened at 2018-09-30 16:45:59
+help
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 11:11:12
+help
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 11:11:59
+help
+list static
+config server http://abc
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 11:13:04
+config server http://hello.world
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 14:14:37
+help
+config server http://localhost:55123/allpay
+// [failed] use abc
+use abc
+config server http://csz.nhsoft.cn/allpay
+// [failed] use abc
+config server http://localhost:55123/allpay
+use abc
+config server http://localhost:51234
+// [failed] use abc
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 14:31:17
+// [failed] echo
+config server http://localhost:55123/allpay
+echo
+list component
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 14:57:04
+config server http://localhost:55123/allpay
+list component
+use allinPayService
+list method
+list method
+use weixinpayService
+list method
+list component
+use payLogHistoryDao
+list method
+use echoController
+list method
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 16:22:42
+config server localhost:55123/allpay
+// [failed] list component
+config server http://localhost:55123/allpay
+list component
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 16:25:10
+config server http://localhost:55123/allpay
+// [failed] create com.nhsoft.pay.channel.ali.channel.AlipayChannel
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 16:27:03
+config server http://localhost:55123/allpay
+create com.nhsoft.pay.channel.ali.channel.AlipayChannel
+create com.nhsoft.module.pay.export.meta.service.RegisterService
+create com.nhsoft.pay.channel.union.model.UnionTraceGenerator
+create com.nhsoft.pay.channel.union.model.UnionTraceGenerator$UnionTraceGeneratorId
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 17:45:47
+create java.lang.String
+// [failed] create java.lang.String
+create java.lang.String
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 17:48:00
+create java.lang.String
+// [failed] create java.lang.String -name abc
+create java.lang.String --name abc
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 17:57:41
+create java.lang.String
+list
+print TEMP1121683649
+create java.math.BigDecimal
+list
+print TEMP1621313390
+config server http://localhost:55123/allpay
+list component
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-08 18:00:13
+config server http://localhost:55123/allpay
+list component
+use gson
+list method
+list component
+create com.nhsoft.module.pay.model.PayLog
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-09 10:11:43
+// [failed] create com.nhsoft.module.pay.model.PayLog
+config server ttp://localhost:55123/allpay
+config server http://localhost:55123/allpay
+// [failed] create com.nhsoft.module.pay.model.PayLog
+// [failed] create com.nhsoft.module.pay.model.PayLog
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-09 10:15:02
+config server http://localhost:55123/allpay
+// [failed] create List<ClassField> classFields = shell.listClassFields(className);
+create com.nhsoft.module.pay.model.PayLog
+print TEMP1928199568
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-09 15:17:07
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-09 16:55:27
+config server http://localhost:55123/allpay
+// [failed] create com.nhsoft.module.pay.model.PayLog
+create com.nhsoft.module.pay.model.PayLog
+print TEMP1608682151
+create java.lang.String --name channelName 
+create com.nhsoft.module.pay.model.PayLog
+print TEMP744859209
+create java.lang.String
+create com.nhsoft.module.pay.model.PayLog
+print TEMP1896137602
+// [failed] create com.nhsoft.module.pay.model.PayLog
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-11 10:07:44
+config server http://localhost:55123/allpay
+// [failed] create com.nhsoft.pay.module.model.PayLog
+// [failed] create com.nhsoft.pay.module.pay.model.PayLog
+create com.nhsoft.module.pay.model.PayLog
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-11 10:17:58
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-11 15:16:59
