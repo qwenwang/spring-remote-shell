@@ -76,7 +76,10 @@ public class ConsoleUserInput implements UserInput {
 	@Override
 	public String prompt(String prompt, String defaultValue, boolean echo) {
 		try {
-			String answer = reader().readLine(prompt);
+			boolean historyEnabled = reader().isHistoryEnabled();
+			reader().setHistoryEnabled(false);
+			String answer = reader().readLine(prompt+":");
+			reader().setHistoryEnabled(historyEnabled);
 			return "".equals(answer) ? defaultValue : answer;
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage());
