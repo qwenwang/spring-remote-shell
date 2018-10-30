@@ -10,6 +10,7 @@ import com.qwen.spring.shell.config.SpringRemoteShell;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.lang3.tuple.MutableTriple;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliCommand;
@@ -41,6 +42,8 @@ public class Commands implements CommandMarker {
 
     private static final String CALL = "call";
 
+    private static final String REPEAT = "repeat";
+
     private static final String LIST = "list";
 
     private static final String PRINT = "print";
@@ -65,7 +68,12 @@ public class Commands implements CommandMarker {
         gsonBuilder.setDateFormat("yyyy-MM-dd HH:mm:ss");
         gsonBuilder.registerTypeAdapter(Date.class, (JsonDeserializer<Date>) (json, typeOfT, context) -> {
             try {
-                return (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")).parse(json.getAsString());
+                String str = json.getAsString();
+                if(str.matches("\\w[4]-\\w[2]-\\w[2]")) {
+                    return (new SimpleDateFormat("yyyy-MM-dd")).parse(json.getAsString());
+                } else {
+                    return (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")).parse(json.getAsString());
+                }
             } catch (ParseException var5) {
                 return null;
             }
@@ -110,7 +118,7 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = CD, help = "跳转目录")
-    public String use(@CliOption(mandatory = true, key = "", optionContext = "completion-component disable-string-converter", help = "Component或者类名称") String component) {
+    public String use(@CliOption(mandatory = true, key = {"", "component"}, optionContext = "completion-component disable-string-converter", help = "Component或者类名称") String component) {
         if("..".equals(component)) {
             shell.useComponent(null);
         } else {
@@ -120,7 +128,7 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = CALL, help = "调用特定Component的Method")
-    public String callMethod(@CliOption(mandatory = true, key = "", help = "方法名") String methodName) {
+    public String callMethod(@CliOption(mandatory = true, key = {"", "method"}, optionContext = "completion-method disable-string-converter", help = "方法名") String methodName) {
         List<MethodInfo> methods = shell.listMethods(null, false).stream().filter(m -> m.getName().equals(methodName)).collect(Collectors.toList());
         if(methods.size() == 0) {
             methods = shell.listMethods(methodName, false);
@@ -164,7 +172,7 @@ public class Commands implements CommandMarker {
             }
             params.add(Tuple.makeTuple(fieldInfo.getType(), fieldValue));
         }
-        ResponseDTO response = shell.call(methodInfo.getName(), params);
+        ResponseDTO response = shell.call(methodInfo, params);
         if(!ResponseCode.SUCCESS.equals(response.getCode())) {
             throw new RuntimeException(String.format("%s:%s", response.getCode(), response.getMsg()));
         }
@@ -179,11 +187,28 @@ public class Commands implements CommandMarker {
         }
     }
 
+    @CliCommand(value = REPEAT, help = "重复调用之前的方法")
+    public String repeat() {
+        ResponseDTO response = shell.repeat();
+        if(!ResponseCode.SUCCESS.equals(response.getCode())) {
+            throw new RuntimeException(String.format("%s:%s", response.getCode(), response.getMsg()));
+        }
+        String result = (String)response.getResult();
+        shell.putContainer("RESULT", shell.getHistory().getMiddle().getReturnType(), result);
+        JsonParser parser = new JsonParser();
+        try {
+            JsonElement jsonElement = parser.parse(result);
+            return gson.toJson(jsonElement);
+        } catch (JsonSyntaxException e) {
+            return result;
+        }
+    }
+
     @CliCommand(value = CREATE, help = "创建对象")
-    public String create(@CliOption(mandatory = true, key = "", help = "类名") String className,
-                         @CliOption(mandatory = false, key = "name", help = "对象名") String objectName,
-                         @CliOption(mandatory = false, key = "value", help = "值") String value,
-                         @CliOption(mandatory = false, key = "input", help = "文件路径") String path) throws IOException {
+    public String create(@CliOption(mandatory = true, key = {"", "type"}, optionContext = "completion-class disable-string-converter", help = "类名") String className,
+                         @CliOption(key = "name", help = "对象名") String objectName,
+                         @CliOption(key = "value", help = "值") String value,
+                         @CliOption(key = "input", help = "文件路径") String path) throws IOException {
         if(path != null) {
             return shell.putContainer(objectName, className, FileUtils.readFileToString(new File(path)));
         }
@@ -205,8 +230,8 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = WRITE, help = "将对象写入文件")
-    public String write(@CliOption(mandatory = true, key = "", help = "对象名") String objectName,
-                        @CliOption(mandatory = false, key = "output", help = "文件路径") String path) throws IOException {
+    public String write(@CliOption(mandatory = true, key = {"", "name"}, optionContext = "completion-dto disable-string-converter", help = "对象名") String objectName,
+                        @CliOption(key = "output", help = "文件路径") String path) throws IOException {
         if(path == null) {
             path = userInput.prompt("请输入文件路径", "<NULL>", true);
             if("<NULL>".equals(path)) {
@@ -231,6 +256,7 @@ public class Commands implements CommandMarker {
     private Object value(String literal, String type, boolean toType) {
         switch (type) {
             case "java.lang.String":
+            case "java.util.Date":
                 return literal;
             case "java.math.BigDecimal":
                 if(!NumberUtils.isParsable(literal)) {
@@ -253,7 +279,12 @@ public class Commands implements CommandMarker {
                 }
             default:
                 if (toType) {
-                    return gson.fromJson(literal, Map.class);
+                    if(literal.startsWith("{")) {
+                        return gson.fromJson(literal, Map.class);
+                    }
+                    else if(literal.startsWith("[")) {
+                        return gson.fromJson(literal, List.class);
+                    }
                 }
                 return literal;
         }

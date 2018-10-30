@@ -6,6 +6,9 @@ import com.nhsoft.provider.shell.remote.FieldInfo;
 import com.nhsoft.provider.shell.remote.MethodInfo;
 import com.nhsoft.provider.shell.remote.ShellRemoteService;
 import com.qwen.spring.shell.command.Container;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.apache.commons.lang3.tuple.MutableTriple;
+import org.apache.commons.lang3.tuple.Triple;
 import org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +25,7 @@ public class SpringRemoteShell {
     private List<FieldInfo> components = Collections.emptyList();
     private List<MethodInfo> methods = Collections.emptyList();
     private int tempIndex = 0;
+    private MutableTriple<String, MethodInfo, List<Tuple<String, String>>> history;
 
     public void setUrl(String url) {
         HttpInvokerProxyFactoryBean bean = new HttpInvokerProxyFactoryBean();
@@ -50,6 +54,10 @@ public class SpringRemoteShell {
 
     public String getCurrentComponent() {
         return currentComponent;
+    }
+
+    public MutableTriple<String, MethodInfo, List<Tuple<String, String>>> getHistory() {
+        return history;
     }
 
     ShellRemoteService get() {
@@ -95,6 +103,17 @@ public class SpringRemoteShell {
         }
     }
 
+    public List<String> listClasses(String filter, boolean prefix) {
+        if(currentComponent == null) {
+            return Collections.emptyList();
+        }
+        if(prefix) {
+            return methods.stream().flatMap(m -> m.getParams().stream().map(FieldInfo::getType)).filter(p -> p.startsWith(filter)).collect(Collectors.toList());
+        } else {
+            return methods.stream().flatMap(m -> m.getParams().stream().map(FieldInfo::getType)).filter(p -> p.contains(filter)).collect(Collectors.toList());
+        }
+    }
+
     public List<FieldInfo> listClassFields(String className) {
         return get().listClassFields(className);
     }
@@ -123,7 +142,20 @@ public class SpringRemoteShell {
         return container;
     }
 
-    public ResponseDTO call(String method, List<Tuple<String, String>> params) {
-        return get().callMethod(currentComponent, method, params);
+    public ResponseDTO call(MethodInfo method, List<Tuple<String, String>> params) {
+        if(history == null) {
+            history = new MutableTriple<>();
+        }
+        history.setLeft(currentComponent);
+        history.setMiddle(method);
+        history.setRight(params);
+        return get().callMethod(currentComponent, method.getName(), params);
+    }
+
+    public ResponseDTO repeat() {
+        if(history == null) {
+            throw new RuntimeException("历史资料不存在");
+        }
+        return get().callMethod(history.left, history.middle.getName(), history.right);
     }
 }

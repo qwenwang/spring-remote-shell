@@ -152,3 +152,10 @@ ls
 // Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 09:43:30
 // [failed] write a
 // Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 09:51:19
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 12:05:52
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 12:06:20
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 12:07:03
+config http://localhost:55123/allpay
+ls
+// [failed] cd dfa
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 14:54:58

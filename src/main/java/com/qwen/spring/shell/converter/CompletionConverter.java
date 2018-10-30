@@ -53,14 +53,8 @@ public class CompletionConverter implements Converter<String> {
 	@Autowired
 	private SpringRemoteShell shell;
 
-	@PostConstruct
-	public void init() {
-		System.out.println("hello world");
-	}
-
 	@Override
 	public boolean supports(Class<?> type, String optionContext) {
-		System.out.println("supports" + completionKind(optionContext));
 		return type == String.class && completionKind(optionContext) != null;
 	}
 
@@ -82,19 +76,28 @@ public class CompletionConverter implements Converter<String> {
 	@Override
 	public boolean getAllPossibleValues(List<Completion> completions, Class<?> targetType, String existingData,
 			String optionContext, MethodTarget target) {
-		System.out.println("all posible values");
-		String kind = completionKind(optionContext);
+			String kind = completionKind(optionContext);
 		List<String> proposals = Collections.emptyList();
 		switch (kind) {
 			case "component":
+				proposals = shell.listComponents(existingData, true).stream().map(FieldInfo::getName).collect(Collectors.toList());
+				break;
 			case "method":
+				proposals = shell.listMethods(existingData, true).stream().map(MethodInfo::getName).collect(Collectors.toList());
+				break;
 			case "common":
 				if(shell.getCurrentComponent() == null) {
-					proposals = shell.listComponents(kind, true).stream().map(FieldInfo::getName).collect(Collectors.toList());
+					proposals = shell.listComponents(existingData, true).stream().map(FieldInfo::getName).collect(Collectors.toList());
 				} else {
-					proposals = shell.listMethods(kind, true).stream().map(MethodInfo::getName).collect(Collectors.toList());
+					proposals = shell.listMethods(existingData, true).stream().map(MethodInfo::getName).collect(Collectors.toList());
 				}
+				break;
 			case "dto":
+				shell.listContainerKeys();
+				break;
+			case "class":
+				proposals = shell.listClasses(existingData, false);
+				break;
 
 		}
 		completions.addAll(proposals.stream().map(Completion::new).collect(Collectors.toList()));
