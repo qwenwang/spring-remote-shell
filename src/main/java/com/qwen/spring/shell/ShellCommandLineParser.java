@@ -64,7 +64,7 @@ public class ShellCommandLineParser {
 				logger.error("Unable to read from " + f.toString(), e);
 			}
 		}
-		String[] commandsToExecute = (commands.size() > 0) ? commands.toArray(new String[commands.size()]) : null;
+		String[] commandsToExecute = (commands.size() > 0) ? commands.toArray(new String[0]) : null;
 
 		int historySize = shellProperties.getHistorySize();
 		if (historySize < 0) {

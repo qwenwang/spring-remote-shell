@@ -7,6 +7,7 @@ import com.nhsoft.provider.internal.dto.ResponseCode;
 import com.nhsoft.provider.shell.remote.FieldInfo;
 import com.nhsoft.provider.shell.remote.MethodInfo;
 import com.qwen.spring.shell.config.SpringRemoteShell;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -38,9 +41,11 @@ public class Commands implements CommandMarker {
 
     private static final String CALL = "call";
 
-    private static final String LIST_CONTAINER = "list container";
+    private static final String LIST = "list";
 
     private static final String PRINT = "print";
+
+    private static final String WRITE = "write";
 
     private static final String CONFIG = "config";
 
@@ -88,11 +93,11 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = LS, help = "列出所有对象")
-    public String ls() {
+    public String ls(@CliOption(mandatory = false, key = {"", "filter"}, help = "过滤") String filter) {
         if(shell.getCurrentComponent() == null) {
-            return shell.listComponents().stream().map(c -> String.format("%s[%s]", c.getName(), typeToSimple(c.getType()))).collect(Collectors.joining("\n"));
+            return shell.listComponents(filter, false).stream().map(c -> String.format("%s[%s]", c.getName(), typeToSimple(c.getType()))).collect(Collectors.joining("\n"));
         } else {
-            return shell.listMethods().stream().map(m -> String.format("%s %s(%s)", typeToSimple(m.getReturnType()), m.getName(), m.getParams().stream().map(p -> String.format("%s %s", typeToSimple(p.getType()), p.getName())).collect(Collectors.joining(", ")))).collect(Collectors.joining("\n"));
+            return shell.listMethods(filter, false).stream().map(m -> String.format("%s %s(%s)", typeToSimple(m.getReturnType()), m.getName(), m.getParams().stream().map(p -> String.format("%s %s", typeToSimple(p.getType()), p.getName())).collect(Collectors.joining(", ")))).collect(Collectors.joining("\n"));
         }
     }
 
@@ -105,26 +110,30 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = CD, help = "跳转目录")
-    public String use(@CliOption(mandatory = true, key = "", help = "Component或者类名称") String component) {
-        shell.useComponent(component);
+    public String use(@CliOption(mandatory = true, key = "", optionContext = "completion-component disable-string-converter", help = "Component或者类名称") String component) {
+        if("..".equals(component)) {
+            shell.useComponent(null);
+        } else {
+            shell.useComponent(component);
+        }
         return "完成";
     }
 
     @CliCommand(value = CALL, help = "调用特定Component的Method")
     public String callMethod(@CliOption(mandatory = true, key = "", help = "方法名") String methodName) {
-        List<MethodInfo> methods = shell.listMethods().stream().filter(m -> m.getName().equals(methodName)).collect(Collectors.toList());
+        List<MethodInfo> methods = shell.listMethods(null, false).stream().filter(m -> m.getName().equals(methodName)).collect(Collectors.toList());
         if(methods.size() == 0) {
-            methods = shell.listMethods().stream().filter(m -> m.getName().contains(methodName)).collect(Collectors.toList());
+            methods = shell.listMethods(methodName, false);
             if(methods.size() == 0) {
                 throw new RuntimeException(String.format("方法[%s]不存在", methodName));
             }
         }
-        MethodInfo methodInfo = null;
+        MethodInfo methodInfo;
         if(methods.size() > 1) {
             StringBuilder sb = new StringBuilder();
             for(int i = 0;i<methods.size();i++) {
                 MethodInfo method = methods.get(i);
-                sb.append(String.format("%d: %s %s(%s)\n", i+1, typeToSimple(method.getReturnType()), method.getName(), method.getParams().stream().map(p -> String.format("%s %s", typeToSimple(p.getType()), p.getName()))));
+                sb.append(String.format("%d: %s %s(%s)\n", i+1, typeToSimple(method.getReturnType()), method.getName(), method.getParams().stream().map(p -> String.format("%s %s", typeToSimple(p.getType()), p.getName())).collect(Collectors.joining(", "))));
             }
             sb.append("请选择执行的函数编号");
             String value = userInput.prompt(sb.toString(), "<NULL>", true);
@@ -160,6 +169,7 @@ public class Commands implements CommandMarker {
             throw new RuntimeException(String.format("%s:%s", response.getCode(), response.getMsg()));
         }
         String result = (String)response.getResult();
+        shell.putContainer("RESULT", methodInfo.getReturnType(), result);
         JsonParser parser = new JsonParser();
         try {
             JsonElement jsonElement = parser.parse(result);
@@ -172,14 +182,18 @@ public class Commands implements CommandMarker {
     @CliCommand(value = CREATE, help = "创建对象")
     public String create(@CliOption(mandatory = true, key = "", help = "类名") String className,
                          @CliOption(mandatory = false, key = "name", help = "对象名") String objectName,
-                         @CliOption(mandatory = false, key = "value", help = "值")String value) {
+                         @CliOption(mandatory = false, key = "value", help = "值") String value,
+                         @CliOption(mandatory = false, key = "input", help = "文件路径") String path) throws IOException {
+        if(path != null) {
+            return shell.putContainer(objectName, className, FileUtils.readFileToString(new File(path)));
+        }
         if(fundamentalClasses.contains(className)) {
             return createFundamental(className, objectName, value);
         }
         return createCustom(className, objectName, value);
     }
 
-    @CliCommand(value = LIST_CONTAINER, help = "查看本地缓存对象")
+    @CliCommand(value = LIST, help = "查看本地缓存对象")
     public String list() {
         return shell.listContainerKeys().stream().collect(Collectors.joining("\n"));
     }
@@ -190,10 +204,24 @@ public class Commands implements CommandMarker {
         return String.format("类型:%s\n值:%s", container.getType(), container.getValue());
     }
 
+    @CliCommand(value = WRITE, help = "将对象写入文件")
+    public String write(@CliOption(mandatory = true, key = "", help = "对象名") String objectName,
+                        @CliOption(mandatory = false, key = "output", help = "文件路径") String path) throws IOException {
+        if(path == null) {
+            path = userInput.prompt("请输入文件路径", "<NULL>", true);
+            if("<NULL>".equals(path)) {
+                throw new RuntimeException("无效的值");
+            }
+        }
+        Container container = shell.getContainer(objectName);
+        FileUtils.writeStringToFile(new File(path), container.getValue());
+        return "完成";
+    }
+
     private String createFundamental(String className, String objectName, String value) {
         if(value == null) {
             value = userInput.prompt(String.format("请输入[%s]的值", className), "<NULL>", true);
-            if(value.equals("<NULL>")) {
+            if("<NULL>".equals(value)) {
                 throw new RuntimeException("无效的值");
             }
         }
@@ -264,8 +292,11 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = CONFIG, help = "config")
-    public String configServer(@CliOption(mandatory = true, key = {"", "uri"}, help = "Spring服务的地址")String uri,
+    public String configServer(@CliOption(mandatory = false, key = {"", "uri"}, help = "Spring服务的地址")String uri,
                                @CliOption(mandatory = false, key = "prefix", help = "需要扫描的包前缀")String prefix) {
+        if(uri != null) {
+            shell.setUrl(uri);
+        }
         shell.setUrl(uri);
         if(prefix != null) {
             shell.setPrefix(prefix);

@@ -46,9 +46,6 @@ public class BaseShellAutoConfiguration {
 
 	private static final Logger logger = LoggerFactory.getLogger(BaseShellAutoConfiguration.class);
 
-	@Autowired
-	private CommandLine commandLine;
-
 	@Bean
 	public ShellCommandLineParser shellCommandLineParser() {
 		return new ShellCommandLineParser();

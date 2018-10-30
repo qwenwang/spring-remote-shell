@@ -6,14 +6,11 @@ import com.nhsoft.provider.shell.remote.FieldInfo;
 import com.nhsoft.provider.shell.remote.MethodInfo;
 import com.nhsoft.provider.shell.remote.ShellRemoteService;
 import com.qwen.spring.shell.command.Container;
-import org.apache.commons.lang3.RandomUtils;
 import org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class SpringRemoteShell {
@@ -22,7 +19,8 @@ public class SpringRemoteShell {
     private String prefix;
     private String currentComponent;
     private Map<String, Container> containers = new HashMap<>();
-    private List<MethodInfo> methods = new ArrayList<>();
+    private List<FieldInfo> components = Collections.emptyList();
+    private List<MethodInfo> methods = Collections.emptyList();
     private int tempIndex = 0;
 
     public void setUrl(String url) {
@@ -33,6 +31,7 @@ public class SpringRemoteShell {
         shellRemoteService = (ShellRemoteService) bean.getObject();
         try {
             echo();
+            refresh();
         } catch (Exception e) {
             throw new RuntimeException("连接失败");
         }
@@ -40,6 +39,13 @@ public class SpringRemoteShell {
 
     public void setPrefix(String prefix) {
         this.prefix = prefix;
+        if(shellRemoteService != null) {
+            refresh();
+        }
+    }
+
+    private void refresh() {
+        components = get().listComponents(prefix);
     }
 
     public String getCurrentComponent() {
@@ -57,17 +63,36 @@ public class SpringRemoteShell {
         return get().echo();
     }
 
-    public List<FieldInfo> listComponents() {
-        return get().listComponents(prefix);
+    public List<FieldInfo> listComponents(String filter, boolean prefix) {
+        if(filter == null) {
+            return components;
+        }
+        if(prefix) {
+            return components.stream().filter(c -> c.getName().startsWith(filter)).collect(Collectors.toList());
+        } else {
+            return components.stream().filter(c -> c.getName().contains(filter)).collect(Collectors.toList());
+        }
     }
 
     public void useComponent(String component) {
         currentComponent = component;
-        methods = get().listMethods(currentComponent);
+        if(currentComponent != null) {
+            components.stream().filter(c -> c.getName().equals(component)).findAny().orElseThrow(() -> new RuntimeException(String.format("component[%s]不存在", component)));
+            methods = get().listMethods(currentComponent);
+        } else {
+            methods = Collections.emptyList();
+        }
     }
 
-    public List<MethodInfo> listMethods() {
-        return methods;
+    public List<MethodInfo> listMethods(String filter, boolean prefix) {
+        if(filter == null) {
+            return methods;
+        }
+        if(prefix) {
+            return methods.stream().filter(m -> m.getName().startsWith(filter)).collect(Collectors.toList());
+        } else {
+            return methods.stream().filter(m -> m.getName().contains(filter)).collect(Collectors.toList());
+        }
     }
 
     public List<FieldInfo> listClassFields(String className) {
@@ -83,7 +108,7 @@ public class SpringRemoteShell {
         container.setType(type);
         container.setValue(json);
         containers.put(name, container);
-        return name;
+        return String.format("<%s>", name);
     }
 
     public List<String> listContainerKeys() {

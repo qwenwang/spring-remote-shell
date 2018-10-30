@@ -16,10 +16,17 @@
 
 package com.qwen.spring.shell.command;
 
+import jline.console.ConsoleReader;
+import org.fusesource.jansi.Ansi;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.shell.core.JLineShellComponent;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
@@ -31,6 +38,23 @@ import java.util.List;
  */
 @Component
 public class ConsoleUserInput implements UserInput {
+
+	private ConsoleReader reader;
+	@Autowired
+	private JLineShellComponent shell;
+
+	public ConsoleReader reader() {
+		if(reader == null) {
+			try {
+				Field field = shell.getClass().getSuperclass().getDeclaredField("reader");
+				field.setAccessible(true);
+				return (ConsoleReader)field.get(shell);
+			} catch (Exception e) {
+				throw new RuntimeException(e.getMessage());
+			}
+		}
+		return reader;
+	}
 
 	/**
 	 * Loops until one of the {@code options} is provided. Pressing return is equivalent
@@ -51,10 +75,13 @@ public class ConsoleUserInput implements UserInput {
 
 	@Override
 	public String prompt(String prompt, String defaultValue, boolean echo) {
-		InputStreamReader console = new InputStreamReader(System.in);
-		System.out.format("%s: ", prompt);
-		String answer = read(console, echo);
-		return "".equals(answer) ? defaultValue : answer;
+		try {
+			String answer = reader().readLine(prompt);
+			return "".equals(answer) ? defaultValue : answer;
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+
 	}
 
 	/**
@@ -71,7 +98,11 @@ public class ConsoleUserInput implements UserInput {
 				if (echo) {
 					System.out.print(c);
 				}
-				builder.append(c);
+				if(c == '\b') {
+					builder.deleteCharAt(builder.length()-1);
+				} else {
+					builder.append(c);
+				}
 			}
 			System.out.println();
 		}

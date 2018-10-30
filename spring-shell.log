@@ -117,3 +117,38 @@ config server http://localhost:55123/allpay
 create com.nhsoft.module.pay.model.PayLog
 // Spring Shell 1.2.0.RELEASE log opened at 2018-10-11 10:17:58
 // Spring Shell 1.2.0.RELEASE log opened at 2018-10-11 15:16:59
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-15 11:08:31
+config http://localhost:55123/allpay --prefix com.nhsoft
+ls
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-15 11:24:22
+// [failed] cd abc
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-15 11:37:30
+// [failed] cd abc
+// [failed] cd a
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-25 11:26:58
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-25 11:39:44
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-25 11:40:27
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-25 11:47:43
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 15:16:59
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 15:25:36
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 15:29:23
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 16:10:54
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 16:13:00
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 16:13:30
+// [failed] config
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 16:14:57
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 16:15:50
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 16:17:19
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 17:00:49
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 17:06:04
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 17:06:53
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 17:10:16
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 17:13:32
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 17:16:51
+// [failed] write a
+// [failed] write a
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-29 17:30:15
+// [failed] write a
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 09:43:30
+// [failed] write a
+// Spring Shell 1.2.0.RELEASE log opened at 2018-10-30 09:51:19
