@@ -74,6 +74,10 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-starter-log4j2</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.jabsorb</groupId>
+                    <artifactId>jabsorb</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
     </dependencies>

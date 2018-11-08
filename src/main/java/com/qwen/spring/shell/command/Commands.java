@@ -131,7 +131,7 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = CALL, help = "调用特定Component的Method")
-    public String callMethod(@CliOption(mandatory = true, key = {"", "method"}, optionContext = "completion-method disable-string-converter", help = "方法名") String methodName) {
+    public String callMethod(@CliOption(mandatory = true, key = {"", "method"}, optionContext = "completion-method disable-string-converter", help = "方法名") String methodName) throws IOException {
         List<MethodInfo> methods = shell.listMethods(null, false).stream().filter(m -> m.getName().equals(methodName)).collect(Collectors.toList());
         if(methods.size() == 0) {
             methods = shell.listMethods(methodName, false);
@@ -159,19 +159,29 @@ public class Commands implements CommandMarker {
         for(FieldInfo fieldInfo: methodInfo.getParams()) {
             String variable = userInput.prompt(String.format("请输入[%s]的值(类型[%s])", fieldInfo.getName(), fieldInfo.getType()), "<NULL>", true);
             String fieldValue;
+            if(variable.equals("<SKIP>")) {
+                return null;
+            }
             if(variable.equals("<NULL>")) {
                 params.add(Tuple.makeTuple(fieldInfo.getType(), variable));
                 continue;
             }
-            Matcher matcher = variablePattern.matcher(variable);
-            if(matcher.find()) {
-                Container container = shell.getContainer(matcher.group(1));
-                if(!container.getType().equals(fieldInfo.getType())) {
-                    throw new RuntimeException(String.format("类型不正确[%s]", fieldInfo.getType()));
+            if(variable.equals("<CREATE>")) {
+                System.out.format("开始创建[%s]\n", fieldInfo.getName());
+                create(fieldInfo.getType(), "PARAM", null, null);
+                fieldValue = (String)value(shell.getContainer("PARAM").getValue(), fieldInfo.getType(), false);
+            }
+            else {
+                Matcher matcher = variablePattern.matcher(variable);
+                if(matcher.find()) {
+                    Container container = shell.getContainer(matcher.group(1));
+                    if(!container.getType().equals(fieldInfo.getType())) {
+                        throw new RuntimeException(String.format("类型不正确[%s]", fieldInfo.getType()));
+                    }
+                    fieldValue = (String)value(container.getValue(), container.getType(), false);
+                } else {
+                    fieldValue = (String)value(variable, fieldInfo.getType(), false);
                 }
-                fieldValue = (String)value(container.getValue(), container.getType(), false);
-            } else {
-                fieldValue = (String)value(variable, fieldInfo.getType(), false);
             }
             params.add(Tuple.makeTuple(fieldInfo.getType(), fieldValue));
         }
@@ -308,7 +318,7 @@ public class Commands implements CommandMarker {
     }
 
     private String createCustom(String className, String objectName, Boolean simple) {
-        String value = null;
+        String value;
         if(simple != null && simple) {
             value = userInput.prompt(String.format("请输入[%s]的值", className), "<NULL>", true);
             if("<NULL>".equals(value)) {
