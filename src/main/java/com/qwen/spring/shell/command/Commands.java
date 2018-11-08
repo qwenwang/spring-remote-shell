@@ -2,15 +2,14 @@ package com.qwen.spring.shell.command;
 
 import com.google.gson.*;
 import com.nhsoft.provider.base.dto.Tuple;
-import com.nhsoft.provider.core.dto.ResponseDTO;
 import com.nhsoft.provider.internal.dto.ResponseCode;
 import com.nhsoft.provider.shell.remote.FieldInfo;
 import com.nhsoft.provider.shell.remote.MethodInfo;
+import com.nhsoft.provider.shell.remote.ResponseDTO;
 import com.qwen.spring.shell.config.SpringRemoteShell;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.commons.lang3.tuple.MutableTriple;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliCommand;
@@ -40,6 +39,8 @@ public class Commands implements CommandMarker {
 
     private static final String CREATE = "create";
 
+    private static final String SET = "set";
+
     private static final String CALL = "call";
 
     private static final String REPEAT = "repeat";
@@ -51,6 +52,8 @@ public class Commands implements CommandMarker {
     private static final String WRITE = "write";
 
     private static final String CONFIG = "config";
+
+    private static final String LOG = "log";
 
     private static final List<String> fundamentalClasses = Arrays.asList("java.lang.String", "java.math.BigDecimal", "java.lang.Integer",
             "java.lang.Long", "java.lang.Boolean");
@@ -69,7 +72,7 @@ public class Commands implements CommandMarker {
         gsonBuilder.registerTypeAdapter(Date.class, (JsonDeserializer<Date>) (json, typeOfT, context) -> {
             try {
                 String str = json.getAsString();
-                if(str.matches("\\w[4]-\\w[2]-\\w[2]")) {
+                if(str.matches("\\w{4}-\\w{2}-\\w{2}")) {
                     return (new SimpleDateFormat("yyyy-MM-dd")).parse(json.getAsString());
                 } else {
                     return (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")).parse(json.getAsString());
@@ -207,15 +210,21 @@ public class Commands implements CommandMarker {
     @CliCommand(value = CREATE, help = "创建对象")
     public String create(@CliOption(mandatory = true, key = {"", "type"}, optionContext = "completion-class disable-string-converter", help = "类名") String className,
                          @CliOption(key = "name", help = "对象名") String objectName,
-                         @CliOption(key = "value", help = "值") String value,
+                         @CliOption(key = "simple", help = "简单模式") Boolean simple,
                          @CliOption(key = "input", help = "文件路径") String path) throws IOException {
         if(path != null) {
             return shell.putContainer(objectName, className, FileUtils.readFileToString(new File(path)));
         }
         if(fundamentalClasses.contains(className)) {
-            return createFundamental(className, objectName, value);
+            return createFundamental(className, objectName);
         }
-        return createCustom(className, objectName, value);
+        return createCustom(className, objectName, simple);
+    }
+
+    @CliCommand(value = SET, help = "修改对象属性")
+    public String set(@CliOption(mandatory = true, key = {"", "name"}, optionContext = "completion-attribute disable-string-converter", help = "") String attributeName,
+                         @CliOption(key = "value", help = "值") String value) throws IOException {
+        return "hello world";
     }
 
     @CliCommand(value = LIST, help = "查看本地缓存对象")
@@ -223,8 +232,13 @@ public class Commands implements CommandMarker {
         return shell.listContainerKeys().stream().collect(Collectors.joining("\n"));
     }
 
+    @CliCommand(value = LOG, help = "打印日志")
+    public String log() {
+        return shell.log();
+    }
+
     @CliCommand(value = PRINT, help = "打印对象")
-    public String create(@CliOption(mandatory = true, key = "", help = "对象名") String objectName) {
+    public String print(@CliOption(mandatory = true, key = {"", "name"}, optionContext = "completion-dto disable-string-converter", help = "对象名") String objectName) {
         Container container = shell.getContainer(objectName);
         return String.format("类型:%s\n值:%s", container.getType(), container.getValue());
     }
@@ -243,12 +257,10 @@ public class Commands implements CommandMarker {
         return "完成";
     }
 
-    private String createFundamental(String className, String objectName, String value) {
-        if(value == null) {
-            value = userInput.prompt(String.format("请输入[%s]的值", className), "<NULL>", true);
-            if("<NULL>".equals(value)) {
-                throw new RuntimeException("无效的值");
-            }
+    private String createFundamental(String className, String objectName) {
+        String value = userInput.prompt(String.format("请输入[%s]的值", className), "<NULL>", true);
+        if("<NULL>".equals(value)) {
+            throw new RuntimeException("无效的值");
         }
         return shell.putContainer(objectName, className, (String)value(value, className, false));
     }
@@ -295,8 +307,15 @@ public class Commands implements CommandMarker {
         return type.substring(index+1);
     }
 
-    private String createCustom(String className, String objectName, String value) {
-        if(value == null) {
+    private String createCustom(String className, String objectName, Boolean simple) {
+        String value = null;
+        if(simple != null && simple) {
+            value = userInput.prompt(String.format("请输入[%s]的值", className), "<NULL>", true);
+            if("<NULL>".equals(value)) {
+                throw new RuntimeException("无效的值");
+            }
+        }
+        else {
             List<FieldInfo> classFields = shell.listClassFields(className);
             Map<String, Object> values = new HashMap<>();
             for(FieldInfo fieldInfo: classFields) {
@@ -323,14 +342,21 @@ public class Commands implements CommandMarker {
     }
 
     @CliCommand(value = CONFIG, help = "config")
-    public String configServer(@CliOption(mandatory = false, key = {"", "uri"}, help = "Spring服务的地址")String uri,
-                               @CliOption(mandatory = false, key = "prefix", help = "需要扫描的包前缀")String prefix) {
+    public String configServer(@CliOption(key = {"", "uri"}, help = "Spring服务的地址")String uri,
+                               @CliOption(key = "prefix", help = "需要扫描的包前缀")String prefix,
+                               @CliOption(key = "logLevel", help = "日志等级")String logLevel,
+                               @CliOption(key = "enableDatabaseLog", help = "启用数据库日志")Boolean enableDatabaseLog) {
         if(uri != null) {
             shell.setUrl(uri);
         }
-        shell.setUrl(uri);
         if(prefix != null) {
             shell.setPrefix(prefix);
+        }
+        if(logLevel != null) {
+            shell.setLogLevel(logLevel);
+        }
+        if(enableDatabaseLog != null) {
+            shell.setEnableDatabaseLog(enableDatabaseLog);
         }
         return "完成";
     }

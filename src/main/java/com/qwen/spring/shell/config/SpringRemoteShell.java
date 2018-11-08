@@ -1,14 +1,12 @@
 package com.qwen.spring.shell.config;
 
 import com.nhsoft.provider.base.dto.Tuple;
-import com.nhsoft.provider.core.dto.ResponseDTO;
 import com.nhsoft.provider.shell.remote.FieldInfo;
 import com.nhsoft.provider.shell.remote.MethodInfo;
+import com.nhsoft.provider.shell.remote.ResponseDTO;
 import com.nhsoft.provider.shell.remote.ShellRemoteService;
 import com.qwen.spring.shell.command.Container;
-import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.MutableTriple;
-import org.apache.commons.lang3.tuple.Triple;
 import org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +24,9 @@ public class SpringRemoteShell {
     private List<MethodInfo> methods = Collections.emptyList();
     private int tempIndex = 0;
     private MutableTriple<String, MethodInfo, List<Tuple<String, String>>> history;
+    private String log;
+    private String logLevel;
+    private boolean enableDatabaseLog;
 
     public void setUrl(String url) {
         HttpInvokerProxyFactoryBean bean = new HttpInvokerProxyFactoryBean();
@@ -46,6 +47,14 @@ public class SpringRemoteShell {
         if(shellRemoteService != null) {
             refresh();
         }
+    }
+
+    public void setLogLevel(String logLevel) {
+        this.logLevel = logLevel;
+    }
+
+    public void setEnableDatabaseLog(boolean enableDatabaseLog) {
+        this.enableDatabaseLog = enableDatabaseLog;
     }
 
     private void refresh() {
@@ -149,13 +158,25 @@ public class SpringRemoteShell {
         history.setLeft(currentComponent);
         history.setMiddle(method);
         history.setRight(params);
-        return get().callMethod(currentComponent, method.getName(), params);
+        ResponseDTO dto = get().callMethod(currentComponent, method.getName(), params, logLevel, enableDatabaseLog);
+        if(dto.getLogs() != null) {
+            log = dto.getLogs().stream().collect(Collectors.joining());
+        }
+        return dto;
     }
 
     public ResponseDTO repeat() {
         if(history == null) {
             throw new RuntimeException("历史资料不存在");
         }
-        return get().callMethod(history.left, history.middle.getName(), history.right);
+        ResponseDTO dto = get().callMethod(history.left, history.middle.getName(), history.right, logLevel, enableDatabaseLog);
+        if(dto.getLogs() != null) {
+            log = dto.getLogs().stream().collect(Collectors.joining());
+        }
+        return dto;
+    }
+
+    public String log() {
+        return log;
     }
 }
