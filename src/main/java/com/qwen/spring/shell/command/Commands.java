@@ -1,8 +1,6 @@
 package com.qwen.spring.shell.command;
 
 import com.google.gson.*;
-import com.nhsoft.provider.base.dto.Tuple;
-import com.nhsoft.provider.internal.dto.ResponseCode;
 import com.nhsoft.provider.shell.remote.FieldInfo;
 import com.nhsoft.provider.shell.remote.MethodInfo;
 import com.nhsoft.provider.shell.remote.ResponseDTO;
@@ -10,6 +8,7 @@ import com.qwen.spring.shell.config.SpringRemoteShell;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliCommand;
@@ -155,7 +154,7 @@ public class Commands implements CommandMarker {
         } else {
             methodInfo = methods.get(0);
         }
-        List<Tuple<String, String>> params = new ArrayList<>();
+        List<Pair<String, String>> params = new ArrayList<>();
         for(FieldInfo fieldInfo: methodInfo.getParams()) {
             String variable = userInput.prompt(String.format("请输入[%s]的值(类型[%s])", fieldInfo.getName(), fieldInfo.getType()), "<NULL>", true);
             String fieldValue;
@@ -163,12 +162,17 @@ public class Commands implements CommandMarker {
                 return null;
             }
             if(variable.equals("<NULL>")) {
-                params.add(Tuple.makeTuple(fieldInfo.getType(), variable));
+                params.add(Pair.of(fieldInfo.getType(), variable));
                 continue;
             }
             if(variable.equals("<CREATE>")) {
                 System.out.format("开始创建[%s]\n", fieldInfo.getName());
                 create(fieldInfo.getType(), "PARAM", null, null);
+                fieldValue = (String)value(shell.getContainer("PARAM").getValue(), fieldInfo.getType(), false);
+            }
+            else if(variable.equals("<SIMPLE>")) {
+                System.out.format("开始创建[%s]\n", fieldInfo.getName());
+                create(fieldInfo.getType(), "PARAM", true, null);
                 fieldValue = (String)value(shell.getContainer("PARAM").getValue(), fieldInfo.getType(), false);
             }
             else {
@@ -183,10 +187,10 @@ public class Commands implements CommandMarker {
                     fieldValue = (String)value(variable, fieldInfo.getType(), false);
                 }
             }
-            params.add(Tuple.makeTuple(fieldInfo.getType(), fieldValue));
+            params.add(Pair.of(fieldInfo.getType(), fieldValue));
         }
         ResponseDTO response = shell.call(methodInfo, params);
-        if(!ResponseCode.SUCCESS.equals(response.getCode())) {
+        if(response.getCode() != 0) {
             throw new RuntimeException(String.format("%s:%s", response.getCode(), response.getMsg()));
         }
         String result = (String)response.getResult();
@@ -203,7 +207,7 @@ public class Commands implements CommandMarker {
     @CliCommand(value = REPEAT, help = "重复调用之前的方法")
     public String repeat() {
         ResponseDTO response = shell.repeat();
-        if(!ResponseCode.SUCCESS.equals(response.getCode())) {
+        if(response.getCode() != 0) {
             throw new RuntimeException(String.format("%s:%s", response.getCode(), response.getMsg()));
         }
         String result = (String)response.getResult();
@@ -355,7 +359,11 @@ public class Commands implements CommandMarker {
     public String configServer(@CliOption(key = {"", "uri"}, help = "Spring服务的地址")String uri,
                                @CliOption(key = "prefix", help = "需要扫描的包前缀")String prefix,
                                @CliOption(key = "logLevel", help = "日志等级")String logLevel,
+                               @CliOption(key = "pass", help = "密码")String pass,
                                @CliOption(key = "enableDatabaseLog", help = "启用数据库日志")Boolean enableDatabaseLog) {
+        if(pass != null) {
+            shell.setPass(pass);
+        }
         if(uri != null) {
             shell.setUrl(uri);
         }

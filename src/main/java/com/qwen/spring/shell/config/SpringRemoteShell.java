@@ -1,12 +1,12 @@
 package com.qwen.spring.shell.config;
 
-import com.nhsoft.provider.base.dto.Tuple;
 import com.nhsoft.provider.shell.remote.FieldInfo;
 import com.nhsoft.provider.shell.remote.MethodInfo;
 import com.nhsoft.provider.shell.remote.ResponseDTO;
 import com.nhsoft.provider.shell.remote.ShellRemoteService;
 import com.qwen.spring.shell.command.Container;
 import org.apache.commons.lang3.tuple.MutableTriple;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean;
 import org.springframework.stereotype.Component;
 
@@ -18,12 +18,13 @@ public class SpringRemoteShell {
 
     private ShellRemoteService shellRemoteService;
     private String prefix;
+    private String pass;
     private String currentComponent;
     private Map<String, Container> containers = new HashMap<>();
     private List<FieldInfo> components = Collections.emptyList();
     private List<MethodInfo> methods = Collections.emptyList();
     private int tempIndex = 0;
-    private MutableTriple<String, MethodInfo, List<Tuple<String, String>>> history;
+    private MutableTriple<String, MethodInfo, List<Pair<String, String>>> history;
     private String log;
     private String logLevel;
     private boolean enableDatabaseLog;
@@ -49,6 +50,13 @@ public class SpringRemoteShell {
         }
     }
 
+    public void setPass(String pass) {
+        this.pass = pass;
+        if(shellRemoteService != null) {
+            refresh();
+        }
+    }
+
     public void setLogLevel(String logLevel) {
         this.logLevel = logLevel;
     }
@@ -58,14 +66,14 @@ public class SpringRemoteShell {
     }
 
     private void refresh() {
-        components = get().listComponents(prefix);
+        components = get().listComponents(pass, prefix);
     }
 
     public String getCurrentComponent() {
         return currentComponent;
     }
 
-    public MutableTriple<String, MethodInfo, List<Tuple<String, String>>> getHistory() {
+    public MutableTriple<String, MethodInfo, List<Pair<String, String>>> getHistory() {
         return history;
     }
 
@@ -77,7 +85,7 @@ public class SpringRemoteShell {
     }
 
     public String echo() {
-        return get().echo();
+        return get().echo(pass);
     }
 
     public List<FieldInfo> listComponents(String filter, boolean prefix) {
@@ -92,13 +100,13 @@ public class SpringRemoteShell {
     }
 
     public void useComponent(String component) {
-        currentComponent = component;
-        if(currentComponent != null) {
+        if(component != null) {
             components.stream().filter(c -> c.getName().equals(component)).findAny().orElseThrow(() -> new RuntimeException(String.format("component[%s]不存在", component)));
-            methods = get().listMethods(currentComponent);
+            methods = get().listMethods(pass, component);
         } else {
             methods = Collections.emptyList();
         }
+        currentComponent = component;
     }
 
     public List<MethodInfo> listMethods(String filter, boolean prefix) {
@@ -124,7 +132,7 @@ public class SpringRemoteShell {
     }
 
     public List<FieldInfo> listClassFields(String className) {
-        return get().listClassFields(className);
+        return get().listClassFields(pass, className);
     }
 
     public String putContainer(String name, String type, String json) {
@@ -151,16 +159,17 @@ public class SpringRemoteShell {
         return container;
     }
 
-    public ResponseDTO call(MethodInfo method, List<Tuple<String, String>> params) {
+    public ResponseDTO call(MethodInfo method, List<Pair<String, String>> params) {
         if(history == null) {
             history = new MutableTriple<>();
         }
         history.setLeft(currentComponent);
         history.setMiddle(method);
         history.setRight(params);
-        ResponseDTO dto = get().callMethod(currentComponent, method.getName(), params, logLevel, enableDatabaseLog);
+        ResponseDTO dto = get().callMethod(pass, currentComponent, method.getName(), params, logLevel, enableDatabaseLog);
         if(dto.getLogs() != null) {
             log = dto.getLogs().stream().collect(Collectors.joining());
+            putContainer("LOG", "String", log);
         }
         return dto;
     }
@@ -169,7 +178,7 @@ public class SpringRemoteShell {
         if(history == null) {
             throw new RuntimeException("历史资料不存在");
         }
-        ResponseDTO dto = get().callMethod(history.left, history.middle.getName(), history.right, logLevel, enableDatabaseLog);
+        ResponseDTO dto = get().callMethod(pass, history.left, history.middle.getName(), history.right, logLevel, enableDatabaseLog);
         if(dto.getLogs() != null) {
             log = dto.getLogs().stream().collect(Collectors.joining());
         }
