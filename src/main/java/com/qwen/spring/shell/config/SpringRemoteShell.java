@@ -53,7 +53,11 @@ public class SpringRemoteShell {
     public void setPass(String pass) {
         this.pass = pass;
         if(shellRemoteService != null) {
-            refresh();
+            try {
+                refresh();
+            } catch (Exception e) {
+
+            }
         }
     }
 
