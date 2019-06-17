@@ -2,12 +2,14 @@ package com.qwen.spring.shell.command;
 
 import com.google.gson.*;
 import com.nhsoft.provider.shell.remote.FieldInfo;
+import com.nhsoft.provider.shell.remote.GsonWrapper;
 import com.nhsoft.provider.shell.remote.MethodInfo;
 import com.nhsoft.provider.shell.remote.ResponseDTO;
 import com.qwen.spring.shell.config.SpringRemoteShell;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.lang3.reflect.TypeUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -309,7 +312,11 @@ public class Commands implements CommandMarker {
                         return gson.fromJson(literal, Map.class);
                     }
                     else if(literal.startsWith("[")) {
-                        return gson.fromJson(literal, List.class);
+                        Type t = List.class;
+                        if(!literal.contains("\"") && !literal.contains(".")) {
+                            t = TypeUtils.parameterize(List.class, Integer.class);
+                        }
+                        return gson.fromJson(literal, t);
                     }
                 }
                 return literal;
